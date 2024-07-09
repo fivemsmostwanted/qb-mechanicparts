@@ -24,12 +24,10 @@ local parts = {
     { item = "brake1", event = "qb-mechanicparts:B1" },
     { item = "brake2", event = "qb-mechanicparts:B2" },
     { item = "brake3", event = "qb-mechanicparts:B3" },
-    { item = "brake4", event = "qb-mechanicparts:B4" },
     { item = "transmission0", event = "qb-mechanicparts:T0" },
     { item = "transmission1", event = "qb-mechanicparts:T1" },
     { item = "transmission2", event = "qb-mechanicparts:T2" },
     { item = "transmission3", event = "qb-mechanicparts:T3" },
-    { item = "transmission4", event = "qb-mechanicparts:T4" },
     { item = "suspension0", event = "qb-mechanicparts:S0" },
     { item = "suspension1", event = "qb-mechanicparts:S1" },
     { item = "suspension2", event = "qb-mechanicparts:S2" },
@@ -66,18 +64,22 @@ local function craftPart(source, items, part)
     local Player = QBCore.Functions.GetPlayer(source)
     print("Starting crafting part:", part)
     for item, amount in pairs(items) do
-        local playerItem = Player.Functions.GetItemByName(item)
-        print("Checking item:", item, "required amount:", amount, "player has:", playerItem and playerItem.amount or 0)
-        if not playerItem or playerItem.amount < amount then
-            print("Missing item:", item)
-            TriggerClientEvent('QBCore:Notify', source, 'You are missing '..item..'...', 'error')
-            return
+        if item ~= "time" then -- Exclude 'time' from item checks
+            local playerItem = Player.Functions.GetItemByName(item)
+            print("Checking item:", item, "required amount:", amount, "player has:", playerItem and playerItem.amount or 0)
+            if not playerItem or playerItem.amount < amount then
+                print("Missing item:", item)
+                TriggerClientEvent('QBCore:Notify', source, 'You are missing '..item..'...', 'error')
+                return
+            end
         end
     end
 
     for item, amount in pairs(items) do
-        Player.Functions.RemoveItem(item, amount)
-        print("Removed item:", item, "amount:", amount)
+        if item ~= "time" then -- Exclude 'time' from item removal
+            Player.Functions.RemoveItem(item, amount)
+            print("Removed item:", item, "amount:", amount)
+        end
     end
 
     Player.Functions.AddItem(part, 1)
@@ -85,74 +87,12 @@ local function craftPart(source, items, part)
     TriggerClientEvent('QBCore:Notify', source, 'You built a '..part..'.', 'success')
 end
 
-RegisterServerEvent("craft:engine0")
-AddEventHandler("craft:engine0", function() craftPart(source, { metalscrap = 3, rubber = 2, iron = 1, plastic = 2 }, "engine0") end)
-
-RegisterServerEvent("craft:engine1")
-AddEventHandler("craft:engine1", function() craftPart(source, { metalscrap = 3, rubber = 2, iron = 1, plastic = 2 }, "engine1") end)
-
-RegisterServerEvent("craft:engine2")
-AddEventHandler("craft:engine2", function() craftPart(source, { metalscrap = 4, rubber = 2, iron = 1, plastic = 2 }, "engine2") end)
-
-RegisterServerEvent("craft:engine3")
-AddEventHandler("craft:engine3", function() craftPart(source, { metalscrap = 4, rubber = 2, iron = 1, plastic = 3 }, "engine3") end)
-
-RegisterServerEvent("craft:engine4")
-AddEventHandler("craft:engine4", function() craftPart(source, { metalscrap = 4, rubber = 2, iron = 1, plastic = 3, aluminum = 3 }, "engine4") end)
-
-RegisterServerEvent("craft:brake0")
-AddEventHandler("craft:brake0", function() craftPart(source, { rubber = 2, iron = 1, metalscrap = 2 }, "brake0") end)
-
-RegisterServerEvent("craft:brake1")
-AddEventHandler("craft:brake1", function() craftPart(source, { rubber = 2, iron = 1, metalscrap = 2 }, "brake1") end)
-
-RegisterServerEvent("craft:brake2")
-AddEventHandler("craft:brake2", function() craftPart(source, { rubber = 2, iron = 1, metalscrap = 2 }, "brake2") end)
-
-RegisterServerEvent("craft:brake3")
-AddEventHandler("craft:brake3", function() craftPart(source, { rubber = 3, iron = 2, metalscrap = 2 }, "brake3") end)
-
-RegisterServerEvent("craft:brake4")
-AddEventHandler("craft:brake4", function() craftPart(source, { rubber = 3, iron = 2, metalscrap = 2 }, "brake4") end)
-
-RegisterServerEvent("craft:transmission0")
-AddEventHandler("craft:transmission0", function() craftPart(source, { rubber = 2, iron = 1, metalscrap = 2 }, "transmission0") end)
-
-RegisterServerEvent("craft:transmission1")
-AddEventHandler("craft:transmission1", function() craftPart(source, { rubber = 2, iron = 1, metalscrap = 2 }, "transmission1") end)
-
-RegisterServerEvent("craft:transmission2")
-AddEventHandler("craft:transmission2", function() craftPart(source, { rubber = 2, iron = 1, metalscrap = 2 }, "transmission2") end)
-
-RegisterServerEvent("craft:transmission3")
-AddEventHandler("craft:transmission3", function() craftPart(source, { rubber = 3, iron = 2, metalscrap = 2 }, "transmission3") end)
-
-RegisterServerEvent("craft:transmission4")
-AddEventHandler("craft:transmission4", function() craftPart(source, { rubber = 3, iron = 2, metalscrap = 2 }, "transmission4") end)
-
-RegisterServerEvent("craft:suspension0")
-AddEventHandler("craft:suspension0", function() craftPart(source, { rubber = 2, iron = 1, metalscrap = 2 }, "suspension0") end)
-
-RegisterServerEvent("craft:suspension1")
-AddEventHandler("craft:suspension1", function() craftPart(source, { rubber = 2, iron = 1, metalscrap = 2 }, "suspension1") end)
-
-RegisterServerEvent("craft:suspension2")
-AddEventHandler("craft:suspension2", function() craftPart(source, { rubber = 2, iron = 1, metalscrap = 2 }, "suspension2") end)
-
-RegisterServerEvent("craft:suspension3")
-AddEventHandler("craft:suspension3", function() craftPart(source, { rubber = 3, iron = 2, metalscrap = 2 }, "suspension3") end)
-
-RegisterServerEvent("craft:suspension4")
-AddEventHandler("craft:suspension4", function() craftPart(source, { rubber = 3, iron = 2, metalscrap = 2 }, "suspension4") end)
-
-RegisterServerEvent("craft:turbo0")
-AddEventHandler("craft:turbo0", function() craftPart(source, { rubber = 3, iron = 2, metalscrap = 2 }, "turbo0") end)
-
-RegisterServerEvent("craft:turbo1")
-AddEventHandler("craft:turbo1", function() craftPart(source, { rubber = 3, iron = 2, metalscrap = 2 }, "turbo1") end)
-
-RegisterServerEvent("craft:repairkit")
-AddEventHandler("craft:repairkit", function() craftPart(source, { metalscrap = 4, rubber = 2, plastic = 3, aluminum = 2, steel = 2 }, "repairkit") end)
+for part, materials in pairs(Config.CraftingMaterials) do
+    RegisterServerEvent("craft:"..part)
+    AddEventHandler("craft:"..part, function()
+        craftPart(source, materials, part)
+    end)
+end
 
 RegisterServerEvent("qb-mechanicparts:installPart", function(item, oldModIndex, modType)
     local src = source
@@ -174,7 +114,7 @@ RegisterServerEvent("qb-mechanicparts:installPart", function(item, oldModIndex, 
     elseif modType == 15 then
         oldPart = "suspension" .. (oldModIndex + 1)
     elseif modType == 18 then
-        oldPart = oldModIndex and "turbo1" or "turbo0"
+        oldPart = oldModIndex == 1 and "turbo1" or "turbo0"
     end
 
     if oldPart then

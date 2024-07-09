@@ -1,7 +1,7 @@
 local QBCore = exports['qb-core']:GetCoreObject()
 local isLoggedIn = true
 local PlayerJob = {}
-local onDuty = false
+local onDuty = true
 
 -- List of back engine vehicles
 local BackEngineVehicles = {
@@ -44,7 +44,7 @@ local function saveVehicle()
             [12] = GetVehicleMod(veh, 12),
             [13] = GetVehicleMod(veh, 13),
             [15] = GetVehicleMod(veh, 15),
-            [18] = IsToggleModOn(veh, 18),
+            [18] = IsToggleModOn(veh, 18) and 1 or 0,
         }
     }
     local myCar = QBCore.Functions.GetVehicleProperties(veh)
@@ -72,37 +72,57 @@ AddEventHandler('openmechanicmenu', function()
 end)
 
 -- Generic function for performing crafting
-local function performCrafting(action, dict, anim, time, successEvent)
+local function performCrafting(action, minigames, time, successEvent)
     QBCore.Functions.Progressbar("craft_"..action, "Building "..action.."...", time, false, true, {
         disableMovement = true,
         disableCarMovement = true,
         disableMouse = false,
         disableCombat = true,
     }, {
-        animDict = dict,
-        anim = anim,
+        animDict = "mini@repair",
+        anim = "fixing_a_player",
         flags = 16,
     }, {}, {}, function()
         local playerPed = PlayerPedId()
-        exports['ps-ui']:Circle(function(success)
-            if success then
-                StopAnimTask(playerPed, dict, anim, 1.0)
-                TriggerServerEvent(successEvent)
-                ClearPedTasks(playerPed)
-            else
-                QBCore.Functions.Notify("Failed!", "error")
-                ClearPedTasks(playerPed)
+        local success = true
+
+        for _, minigame in ipairs(minigames) do
+            if minigame.type == "Progress" then
+                success = exports['bl_ui']:Progress(minigame.iterations, minigame.difficulty)
+            elseif minigame.type == "CircleProgress" then
+                success = exports['bl_ui']:CircleProgress(minigame.iterations, minigame.difficulty)
+            elseif minigame.type == "KeyCircle" then
+                success = exports['bl_ui']:KeyCircle(minigame.iterations, minigame.difficulty, minigame.keys)
+            elseif minigame.type == "RapidLines" then
+                success = exports['bl_ui']:RapidLines(minigame.iterations, minigame.difficulty, minigame.lines)
             end
-        end, 2, 30)
+
+            if not success then
+                break
+            end
+
+            Citizen.Wait(1000)  -- Wait 1 second between minigames
+        end
+
+        if success then
+            StopAnimTask(playerPed, "mini@repair", "fixing_a_player", 1.0)
+            TriggerServerEvent(successEvent)
+            ClearPedTasks(playerPed)
+        else
+            QBCore.Functions.Notify("Failed!", "error")
+            ClearPedTasks(playerPed)
+        end
     end)
 end
 
 -- Register events for crafting parts
-local parts = {"engine0", "engine1", "engine2", "engine3", "engine4", "brake0", "brake1", "brake2", "brake3", "brake4", "transmission0", "transmission1", "transmission2", "transmission3", "transmission4", "suspension0", "suspension1", "suspension2", "suspension3", "suspension4", "turbo0", "turbo1", "repairkit"}
+local parts = {"engine0", "engine1", "engine2", "engine3", "engine4", "brake0", "brake1", "brake2", "brake3", "transmission0", "transmission1", "transmission2", "transmission3", "suspension0", "suspension1", "suspension2", "suspension3", "suspension4", "turbo0", "turbo1", "repairkit"}
 for _, part in pairs(parts) do
     RegisterNetEvent('craft:'..part)
     AddEventHandler("craft:"..part, function()
-        performCrafting(part, "mini@repair", "fixing_a_player", 15000, "craft:"..part)
+        local minigames = Config.Minigames[part]
+        local craftingConfig = Config.CraftingMaterials[part]
+        performCrafting(part, minigames, craftingConfig.time, "craft:"..part)
     end)
 end
 
@@ -143,10 +163,9 @@ AddEventHandler('craft:brakes', function()
         { id = 2, header = "Stock Brakes", txt = "2x Rubber | 1x Iron | 2x Metalscrap", params = { event = "craft:brake0" } },
         { id = 3, header = "Brake Upgrade B", txt = "2x Rubber | 1x Iron | 2x Metalscrap", params = { event = "craft:brake1" } },
         { id = 4, header = "Brake Upgrade C", txt = "2x Rubber | 1x Iron | 2x Metalscrap", params = { event = "craft:brake2" } },
-        { id = 5, header = "Brake Upgrade D", txt = "3x Rubber | 2x Iron | 2x Metalscrap", params = { event = "craft:brake3" } },
-        { id = 6, header = "Brake Upgrade S", txt = "3x Rubber | 2x Iron | 2x Metalscrap", params = { event = "craft:brake4" } },
-        { id = 7, header = "Main Menu", txt = "Back to main menu", params = { event = "craft:mechanicparts" } },
-        { id = 8, header = "Close Menu", txt = "", params = { event = "qb-menu:closeMenu" } },
+        { id = 5, header = "Brake Upgrade S", txt = "3x Rubber | 2x Iron | 2x Metalscrap", params = { event = "craft:brake3" } },
+        { id = 6, header = "Main Menu", txt = "Back to main menu", params = { event = "craft:mechanicparts" } },
+        { id = 7, header = "Close Menu", txt = "", params = { event = "qb-menu:closeMenu" } },
     })
 end)
 
@@ -157,10 +176,9 @@ AddEventHandler('craft:transmissions', function()
         { id = 2, header = "Stock Transmission", txt = "2x Rubber | 1x Iron | 2x Metalscrap", params = { event = "craft:transmission0" } },
         { id = 3, header = "Transmission Upgrade B", txt = "2x Rubber | 1x Iron | 2x Metalscrap", params = { event = "craft:transmission1" } },
         { id = 4, header = "Transmission Upgrade C", txt = "2x Rubber | 1x Iron | 2x Metalscrap", params = { event = "craft:transmission2" } },
-        { id = 5, header = "Transmission Upgrade D", txt = "3x Rubber | 2x Iron | 2x Metalscrap", params = { event = "craft:transmission3" } },
-        { id = 6, header = "Transmission Upgrade S", txt = "3x Rubber | 2x Iron | 2x Metalscrap", params = { event = "craft:transmission4" } },
-        { id = 7, header = "Main Menu", txt = "Back to main menu", params = { event = "craft:mechanicparts" } },
-        { id = 8, header = "Close Menu", txt = "", params = { event = "qb-menu:closeMenu" } },
+        { id = 5, header = "Transmission Upgrade S", txt = "3x Rubber | 2x Iron | 2x Metalscrap", params = { event = "craft:transmission3" } },
+        { id = 6, header = "Main Menu", txt = "Back to main menu", params = { event = "craft:mechanicparts" } },
+        { id = 7, header = "Close Menu", txt = "", params = { event = "qb-menu:closeMenu" } },
     })
 end)
 
@@ -214,7 +232,6 @@ local function installPart(modType, modIndex, item, notify)
                 local pos = GetEntityCoords(ped)
                 local vehpos = GetEntityCoords(vehicle)
                 local drawpos = GetOffsetFromEntityInWorldCoords(vehicle, 0, IsBackEngine(vehModel) and -2.5 or 2.5, 0)
-
                 if #(pos - vehpos) < 4.0 and #(pos - drawpos) < 2.0 and not IsPedInAnyVehicle(ped) then
                     QBCore.Functions.Progressbar("Installing", "Installing "..item.."...", 10000, false, true, {
                         disableMovement = true,
@@ -228,8 +245,13 @@ local function installPart(modType, modIndex, item, notify)
                     }, {}, {}, function()
                         ClearPedTasksImmediately(PlayerPedId())
                         SetVehicleModKit(vehicle, 0)
-                        local oldModIndex = GetVehicleMod(vehicle, modType)
-                        SetVehicleMod(vehicle, modType, modIndex, true)
+                        local oldModIndex = -1  -- Default value for cases where modIndex might not be needed
+                        if modType == 18 then
+                            ToggleVehicleMod(vehicle, modType, modIndex == 1)
+                        else
+                            oldModIndex = GetVehicleMod(vehicle, modType)
+                            SetVehicleMod(vehicle, modType, modIndex, true)
+                        end
                         saveVehicle()
                         TriggerServerEvent("qb-mechanicparts:installPart", item, oldModIndex, modType)
                         QBCore.Functions.Notify(notify, "success")
@@ -256,20 +278,18 @@ local partMods = {
     B0 = {modType = 12, modIndex = -1, item = "brake0", notify = "Stock Brakes Successfully installed"},
     B1 = {modType = 12, modIndex = 0, item = "brake1", notify = "Brake Upgrade B Successfully installed"},
     B2 = {modType = 12, modIndex = 1, item = "brake2", notify = "Brake Upgrade C Successfully installed"},
-    B3 = {modType = 12, modIndex = 2, item = "brake3", notify = "Brake Upgrade D Successfully installed"},
-    B4 = {modType = 12, modIndex = 3, item = "brake4", notify = "Brake Upgrade S Successfully installed"},
+    B3 = {modType = 12, modIndex = 2, item = "brake3", notify = "Brake Upgrade S Successfully installed"},
     T0 = {modType = 13, modIndex = -1, item = "transmission0", notify = "Stock Transmission Successfully installed"},
     T1 = {modType = 13, modIndex = 0, item = "transmission1", notify = "Transmission Upgrade B Successfully installed"},
     T2 = {modType = 13, modIndex = 1, item = "transmission2", notify = "Transmission Upgrade C Successfully installed"},
-    T3 = {modType = 13, modIndex = 2, item = "transmission3", notify = "Transmission Upgrade D Successfully installed"},
-    T4 = {modType = 13, modIndex = 3, item = "transmission4", notify = "Transmission Upgrade S Successfully installed"},
+    T3 = {modType = 13, modIndex = 2, item = "transmission3", notify = "Transmission Upgrade S Successfully installed"},
     S0 = {modType = 15, modIndex = -1, item = "suspension0", notify = "Stock Suspension Successfully installed"},
     S1 = {modType = 15, modIndex = 0, item = "suspension1", notify = "Suspension Upgrade B Successfully installed"},
     S2 = {modType = 15, modIndex = 1, item = "suspension2", notify = "Suspension Upgrade C Successfully installed"},
     S3 = {modType = 15, modIndex = 2, item = "suspension3", notify = "Suspension Upgrade D Successfully installed"},
     S4 = {modType = 15, modIndex = 3, item = "suspension4", notify = "Suspension Upgrade S Successfully installed"},
-    Turbo0 = {modType = 18, modIndex = false, item = "turbo0", notify = "Turbo Successfully removed"},
-    Turbo1 = {modType = 18, modIndex = true, item = "turbo1", notify = "Turbo Successfully installed"},
+    Turbo0 = {modType = 18, modIndex = 0, item = "turbo0", notify = "Turbo Successfully removed"},
+    Turbo1 = {modType = 18, modIndex = 1, item = "turbo1", notify = "Turbo Successfully installed"},
 }
 
 for event, data in pairs(partMods) do
@@ -277,6 +297,32 @@ for event, data in pairs(partMods) do
     AddEventHandler('qb-mechanicparts:'..event, function()
         installPart(data.modType, data.modIndex, data.item, data.notify)
     end)
+end
+
+-- Function to map modIndex to part names based on the highest tier available
+local function mapPartNames(modType, modIndex)
+    local partNames = {
+        [-1] = "Stock",
+        [0] = "Level B",
+        [1] = "Level C",
+        [2] = "Level D",
+        [3] = "Level S"
+    }
+    
+    -- For parts with less than 4 upgrades, map the highest tier available to "Level S"
+    if modType == 12 or modType == 13 then
+        if modIndex == 2 then
+            return "Level S"
+        elseif modIndex == 1 then
+            return "Level A"
+        elseif modIndex == 0 then
+            return "Level B"
+        else
+            return "Stock"
+        end
+    end
+
+    return partNames[modIndex] or "Unknown"
 end
 
 RegisterNetEvent('mechanic:checkVehicleStatus', function()
@@ -290,10 +336,10 @@ RegisterNetEvent('mechanic:checkVehicleStatus', function()
 
         exports['qb-menu']:openMenu({
             { id = 1, header = "Vehicle Status", txt = "", isMenuHeader = true },
-            { id = 2, header = "Engine", txt = "Current: "..engine },
-            { id = 3, header = "Brakes", txt = "Current: "..brakes },
-            { id = 4, header = "Transmission", txt = "Current: "..transmission },
-            { id = 5, header = "Suspension", txt = "Current: "..suspension },
+            { id = 2, header = "Engine", txt = "Current: "..mapPartNames(11, engine) },
+            { id = 3, header = "Brakes", txt = "Current: "..mapPartNames(12, brakes) },
+            { id = 4, header = "Transmission", txt = "Current: "..mapPartNames(13, transmission) },
+            { id = 5, header = "Suspension", txt = "Current: "..mapPartNames(15, suspension) },
             { id = 6, header = "Turbo", txt = "Current: "..turbo },
             { id = 7, header = "Close Menu", txt = "", params = { event = "qb-menu:closeMenu" } },
         })
